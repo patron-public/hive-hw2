@@ -1,0 +1,58 @@
+# hive-hw2
+Find all carriers who cancelled more than 1 flights during 2007, order them from biggest to lowest
+by number of cancelled flights and list in each record all departure cities where cancellation
+happened. How many MR jobs where instanced for this query?
+
+Hint: you can use temporary tables to solve this task
+
+Carrier Canceled flights Cities
+----
+AIR1 73 Chicago, New York, San Diego
+AIR2 45 Miami, Tucson, Huston, Boston
+
+_________________
+
+DROP TABLE hw.cancelled;
+
+CREATE TEMPORARY TABLE hw.cancelled
+STORED AS ORCFILE
+AS
+SELECT cf.carrier carrier_id, a.city city  FROM
+(SELECT uniquecarrier carrier, origin FROM hw.flights WHERE Cancelled=1) cf
+JOIN
+hw.airports a
+on (a.airport_id=cf.origin)
+
+
+
+//SELECT COUNT(*) FROM hw.cancelled;
+//SELECT * FROM hw.cancelled LIMIT 5;
+_________________
+
+CREATE TEMPORARY TABLE hw.filtered_carriers
+STORED AS ORCFILE
+AS
+SELECT cc.carrier_id carrier_id, c.carrier_name carrier_name, cc.count count FROM 
+
+(SELECT carrier_id, COUNT(*) as count 
+FROM hw.cancelled  
+GROUP BY carrier_id 
+HAVING count>1 
+ORDER BY count DESC) cc
+
+JOIN
+
+hw.carriers c
+on (cc.carrier_id=c.carrier_id);
+
+//SELECT * FROM hw.filtered_carriers LIMIT 5;
+_________________________
+
+SELECT filtered.carrier_name, filtered.count, ccity.cities
+FROM 
+hw.filtered_carriers filtered
+LEFT JOIN
+(SELECT carrier_id, concat_ws(", ", collect_set(city)) cities FROM hw.cancelled
+GROUP BY carrier_id) ccity
+
+ON (filtered.carrier_id=ccity.carrier_id);
